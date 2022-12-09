@@ -65,7 +65,7 @@ To get started deploying your app we recommend making an account on [Vercel](htt
 
 By default, the Foo Medical Provider app uses a shared project.
 
-To use your own organization with Foo Medical Provider you will need to [register a new Project on Medplum](https://docs.medplum.com/tutorials/app/register) and replace the `projectId` on the [sign in page](https://github.com/rahul1/foomedical-provider/blob/main/src/pages/SignInPage.tsx#L10) with your new projectId.
+To use your own organization with Foo Medical Provider you will need to [register a new Project on Medplum](https://www.medplum.com/docs/tutorials/register) and replace the `projectId` on the [sign in page](https://github.com/rahul1/foomedical-provider/blob/main/src/pages/SignInPage.tsx#L10) with your new projectId.
 
 To enable Google Authentication, you will have to set the following values on your [Project's Site Settings](https://app.medplum.com/admin/sites)
 
@@ -74,7 +74,7 @@ To enable Google Authentication, you will have to set the following values on yo
 - Recaptcha Site Key
 - Recaptcha Secret Key
 
-Contact the medplum team ([support@medplum.com](mailto:support@medplum.com) or [Discord](https://discord.gg/UBAWwvrVeN])) with any questions.
+Contact the Medplum team ([support@medplum.com](mailto:support@medplum.com) or [Discord](https://discord.gg/UBAWwvrVeN)) with any questions.
 
 ### Compliance
 
