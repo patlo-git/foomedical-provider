@@ -74,7 +74,9 @@ const useStyles = createStyles((theme) => ({
 
   tab: {
     fontWeight: 500,
-    height: 38,
+    // minor adjustment fixes tab underline not showing.
+    height: 37,
+    marginBottom: 1,
     color: theme.white,
     backgroundColor: 'transparent',
     borderColor: theme.fn.variant({ variant: 'filled', color: theme.primaryColor }).background,
