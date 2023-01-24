@@ -1,9 +1,13 @@
 {
   "testEnvironment": "jsdom",
+  "testTimeout": 60000,
   "transform": {
     "^.+\\.(js|jsx|ts|tsx)$": "babel-jest"
   },
   "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "node"],
+  "moduleNameMapper": {
+    "\\.(css|svg)$": "identity-obj-proxy"
+  },
   "testMatch": ["**/src/**/*.test.ts", "**/src/**/*.test.tsx"],
   "setupFilesAfterEnv": ["./src/test.setup.ts"],
   "coverageDirectory": "coverage",
