@@ -1,11 +1,18 @@
 import { MockClient } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import crypto from 'crypto';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { TextEncoder } from 'util';
 import { HeaderBar } from './HeaderBar';
+
+// Allows us to fireEvent.click the dropdown
+global.ResizeObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}))
 
 async function setup(url='/', medplum = new MockClient()): Promise<void> {
   await act(async() => {
@@ -95,5 +102,30 @@ describe('Header bar tabs render', () => {
     await setup();
 
     expect(screen.getByRole('tab', { name: 'Send Message' })).toBeInTheDocument();
+  });
+
+  test('Drop Down works', async () => {
+    await setup();
+
+    const dropDownButton = screen.getAllByRole( 'button', {expanded: false} );
+
+    expect(dropDownButton[0] as HTMLElement).toBeInTheDocument();
+    
+    // Press the down arrow
+    await act(async () => {
+      fireEvent.keyDown(dropDownButton[0], { key: 'ArrowDown', code: 'ArrowDown' });
+    });
+
+    // Press "Enter"
+    await act(async () => {
+      fireEvent.keyDown(dropDownButton[0], { key: 'Enter', code: 'Enter' });
+    });
+
+    // Click dropdown
+    await act(async () => {
+      fireEvent.click(dropDownButton[0]);
+    });
+
+    expect(screen.getByText('Liked posts')).toBeDefined();
   });
 });
