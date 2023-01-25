@@ -21,8 +21,9 @@ async function setup(url='/forms', medplum = new MockClient()): Promise<void> {
 }
 
 describe('Forms list page', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     window.localStorage.clear();
+    await setup();
   });
 
   beforeAll(() => {
@@ -36,39 +37,29 @@ describe('Forms list page', () => {
   });
 
   test('Forms header', async () => {
-    await setup();
-
-    expect(screen.getByRole('heading', { name: 'Forms' })).toBeInTheDocument;
+    expect(screen.getByRole('heading', { name: 'Forms' })).toBeInTheDocument();
   });
   
   test('Title table header', async () => {
-    await setup();
-
     expect(screen.getByRole('columnheader', { name: 'Title' })).toBeInTheDocument();
   });
   
   test('Publisher table header', async () => {
-    await setup();
-
     expect(screen.getByRole('columnheader', { name: 'Publisher' })).toBeInTheDocument();
   });
   
   test('Last Updated table header', async () => {
-    await setup();
-
     expect(screen.getByRole('columnheader', { name: 'Last Updated' })).toBeInTheDocument();
   });
 
   
   test('Renders "New" button', async () => {
-    await setup();
     const newButton = screen.getByRole('button', { name: 'New' });
 
     expect(newButton).toBeInTheDocument();
   });
   
   test('Renders "Import" button', async () => {
-    await setup();
     const importButton = screen.getByRole('button', { name: 'Import' });
     
     expect(importButton).toBeInTheDocument();
