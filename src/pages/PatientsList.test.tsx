@@ -21,8 +21,9 @@ async function setup(url='/patients', medplum = new MockClient()): Promise<void>
 }
 
 describe('Patients list', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     window.localStorage.clear();
+    await setup();
   });
 
   beforeAll(() => {
@@ -36,46 +37,35 @@ describe('Patients list', () => {
   });
 
   test('Patients header', async () => {
-    await setup();
-
-    expect(screen.getByRole('heading', { name: 'Patients' })).toBeInTheDocument;
+    expect(screen.getByRole('heading', { name: 'Patients' })).toBeInTheDocument();
   });
   
   test('Name table header', async () => {
-    await setup();
-
     expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
   });
   
   test('DoB table header', async () => {
-    await setup();
-
     expect(screen.getByRole('columnheader', { name: 'DoB' })).toBeInTheDocument();
   });
   
   test('Email table header', async () => {
-    await setup();
-
     expect(screen.getByRole('columnheader', { name: 'Email' })).toBeInTheDocument();
   });
 
   
   test('Renders "New" button', async () => {
-    await setup();
     const newButton = screen.getByRole('button', { name: 'New' });
 
     expect(newButton).toBeInTheDocument();
   });
   
   test('Renders "Import" button', async () => {
-    await setup();
     const importButton = screen.getByRole('button', { name: 'Import' });
     
     expect(importButton).toBeInTheDocument();
   });
   
   test('Renders "View" button', async () => {
-    await setup();
     const viewButton = screen.getAllByRole('button', { name: 'View' })[0];
 
     fireEvent.click(viewButton);
