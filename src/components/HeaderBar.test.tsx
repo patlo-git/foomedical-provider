@@ -28,8 +28,9 @@ async function setup(url='/', medplum = new MockClient()): Promise<void> {
 }
 
 describe('Header bar tabs render', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     window.localStorage.clear();
+    await setup();
   });
 
   beforeAll(() => {
@@ -43,70 +44,48 @@ describe('Header bar tabs render', () => {
   });
 
   test('Worklist', async () => {
-    await setup();
-
     const tab = screen.getByRole('tab', { name: 'Worklist' });
     
-    expect(tab).toBeInTheDocument;
+    expect(tab).toBeInTheDocument();
   });
   
   test('Patients', async () => {
-    await setup();
-
     expect(screen.getByRole('tab', { name: 'Patients' })).toBeInTheDocument();
   });
   
   test('Visits', async () => {
-    await setup();
-
     expect(screen.getByRole('tab', { name: 'Visits' })).toBeInTheDocument();
   });
   
   test('Forms', async () => {
-    await setup();
-
     expect(screen.getByRole('tab', { name: 'Forms' })).toBeInTheDocument();
   });
   
   test('Reports', async () => {
-    await setup();
-
     expect(screen.getByRole('tab', { name: 'Reports' })).toBeInTheDocument();
   });
 
   test('Care Plans', async () => {
-    await setup();
-
     expect(screen.getByRole('tab', { name: 'Care Plans' })).toBeInTheDocument();
   });
 
   test('Messages', async () => {
-    await setup();
-
     expect(screen.getByRole('tab', { name: 'Messages' })).toBeInTheDocument();
   });
 
   test('Rx', async () => {
-    await setup();
-
     expect(screen.getByRole('tab', { name: 'Rx' })).toBeInTheDocument();
   });
 
   test('Transition of Care', async () => {
-    await setup();
-
     expect(screen.getByRole('tab', { name: 'Transition of Care' })).toBeInTheDocument();
   });
 
   test('Send Message', async () => {
-    await setup();
-
     expect(screen.getByRole('tab', { name: 'Send Message' })).toBeInTheDocument();
   });
 
   test('Drop Down works', async () => {
-    await setup();
-
     const dropDownButton = screen.getAllByRole( 'button', {expanded: false} );
 
     expect(dropDownButton[0] as HTMLElement).toBeInTheDocument();
