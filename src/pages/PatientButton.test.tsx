@@ -42,6 +42,7 @@ describe('Button test', () => {
   });
   
   test('Get button', async () => {
+    // this passes. We get the button and it's in the doc.
     const button = screen.getByRole('button');
   
     
@@ -52,12 +53,14 @@ describe('Button test', () => {
   });
   
   test('View button goes somewhere', async () => {
+    // this does not pass and I don't expect it to right now.
+    
     // we have the button
     // we can click the button
     // I want to verify that it goes to google.com
     
     // I wanted was to somehow pass in a separate url to either the mock or the button to test where it's going
-    // syntax is wrong, but something like this
+    // syntax is wrong, but something like this?
     // const testClick = jest.fn(viewButton onClick={url=`google.com`});
     const mock = jest.fn();
 
