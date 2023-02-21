@@ -3,9 +3,15 @@ import { MedplumProvider } from '@medplum/react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import crypto from 'crypto';
 import React from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import * as router from 'react-router';
+import { MemoryRouter } from 'react-router-dom'; // can you just use memory router and is it better to do so?
 import { TextEncoder } from 'util';
 import { PatientsList } from './PatientsList';
+
+const navigate = jest.fn(); // todo: right place?
+
+console.log('navigate: ', navigate)
+console.log('router: ', router)
 
 async function setup(url='/patients', medplum = new MockClient()): Promise<void> {
   await act(async() => {
@@ -20,9 +26,11 @@ async function setup(url='/patients', medplum = new MockClient()): Promise<void>
   })
 }
 
+
 describe('Patients list', () => {
   beforeEach(async () => {
     window.localStorage.clear();
+    jest.spyOn(router, 'useNavigate').mockImplementation(() => navigate);
     await setup();
   });
 
@@ -34,6 +42,11 @@ describe('Patients list', () => {
     Object.defineProperty(global.self, 'crypto', {
       value: crypto.webcrypto,
     });
+  });
+
+  afterEach(() => {
+    // restore the spy created with spyOn
+    jest.restoreAllMocks();
   });
 
   test('Patients header', async () => {
@@ -65,11 +78,14 @@ describe('Patients list', () => {
     expect(importButton).toBeInTheDocument();
   });
   
-  test('Renders "View" button', async () => {
+  test('View button goes somewhere', async () => {
     const viewButton = screen.getAllByRole('button', { name: 'View' })[0];
+    const patientId = '123'; // todo: how to get patient id from row
 
     fireEvent.click(viewButton);
-
-    expect(viewButton).toBeInTheDocument();
+    
+    expect(navigate).toHaveBeenCalledWith(`/Patient/${patientId}`);
   });
+
+  
 });
