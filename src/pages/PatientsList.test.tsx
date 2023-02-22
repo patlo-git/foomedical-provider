@@ -4,20 +4,18 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import crypto from 'crypto';
 import React from 'react';
 import * as router from 'react-router';
-import { MemoryRouter } from 'react-router-dom'; // can you just use memory router and is it better to do so?
+import { MemoryRouter } from 'react-router-dom'; // can you just use memory router and is it better to do so? trying not to install another package.
 import { TextEncoder } from 'util';
 import { PatientsList } from './PatientsList';
 
-const navigate = jest.fn(); // todo: right place?
+const medplum = new MockClient()
+const navigate = jest.fn();
 
-console.log('navigate: ', navigate)
-console.log('router: ', router)
-
-async function setup(url='/patients', medplum = new MockClient()): Promise<void> {
+async function setup(url='/patients'): Promise<void> {
   await act(async() => {
     render(
       <MemoryRouter
-        initialEntries={[url]} initialIndex={0}>
+      initialEntries={[url]} initialIndex={0}>
         <MedplumProvider medplum={medplum}>
           <PatientsList />
         </MedplumProvider>
@@ -26,27 +24,21 @@ async function setup(url='/patients', medplum = new MockClient()): Promise<void>
   })
 }
 
-
 describe('Patients list', () => {
   beforeEach(async () => {
     window.localStorage.clear();
     jest.spyOn(router, 'useNavigate').mockImplementation(() => navigate);
     await setup();
   });
-
+  
   beforeAll(() => {
     Object.defineProperty(global, 'TextEncoder', {
       value: TextEncoder,
     });
-
+    
     Object.defineProperty(global.self, 'crypto', {
       value: crypto.webcrypto,
     });
-  });
-
-  afterEach(() => {
-    // restore the spy created with spyOn
-    jest.restoreAllMocks();
   });
 
   test('Patients header', async () => {
@@ -80,12 +72,12 @@ describe('Patients list', () => {
   
   test('View button goes somewhere', async () => {
     const viewButton = screen.getAllByRole('button', { name: 'View' })[0];
-    const patientId = '123'; // todo: how to get patient id from row
+    const patients = medplum.searchResources('Patient').read();
+
+    const patientId = patients[0].id;
 
     fireEvent.click(viewButton);
     
     expect(navigate).toHaveBeenCalledWith(`/Patient/${patientId}`);
   });
-
-  
 });
