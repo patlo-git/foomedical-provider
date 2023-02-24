@@ -76,6 +76,12 @@ describe('Patients list', () => {
     
     expect(importButton).toBeInTheDocument();
   });
+
+  test('Renders "View" button', async () => {
+    const viewButton = screen.getAllByRole('button', { name: 'View' })[0];
+
+    expect(viewButton).toBeInTheDocument();
+  });
   
   test('"View" button navigates to patient page', async () => {
     const viewButton = screen.getAllByRole('button', { name: 'View' })[0];
