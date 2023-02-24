@@ -3,19 +3,23 @@ import { MedplumProvider } from '@medplum/react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import crypto from 'crypto';
 import React from 'react';
-import * as router from 'react-router';
-import { MemoryRouter } from 'react-router-dom'; // can you just use memory router and is it better to do so? trying not to install another package.
+import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { TextEncoder } from 'util';
 import { PatientsList } from './PatientsList';
 
-const medplum = new MockClient()
-const navigate = jest.fn();
+const mockNav = jest.fn();
 
-async function setup(url='/patients'): Promise<void> {
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom') as any,
+  useNavigate: () => mockNav,
+}));
+
+const medplum = new MockClient();
+
+async function setup(): Promise<void> {
   await act(async() => {
     render(
-      <MemoryRouter
-      initialEntries={[url]} initialIndex={0}>
+      <MemoryRouter>
         <MedplumProvider medplum={medplum}>
           <PatientsList />
         </MedplumProvider>
@@ -27,7 +31,6 @@ async function setup(url='/patients'): Promise<void> {
 describe('Patients list', () => {
   beforeEach(async () => {
     window.localStorage.clear();
-    jest.spyOn(router, 'useNavigate').mockImplementation(() => navigate);
     await setup();
   });
   
@@ -40,6 +43,10 @@ describe('Patients list', () => {
       value: crypto.webcrypto,
     });
   });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  })
 
   test('Patients header', async () => {
     expect(screen.getByRole('heading', { name: 'Patients' })).toBeInTheDocument();
@@ -70,14 +77,14 @@ describe('Patients list', () => {
     expect(importButton).toBeInTheDocument();
   });
   
-  test('View button goes somewhere', async () => {
+  test('View button navigates to patient page', async () => {
     const viewButton = screen.getAllByRole('button', { name: 'View' })[0];
-    const patients = medplum.searchResources('Patient').read();
+    const patient = medplum.searchResources('Patient').read();
 
-    const patientId = patients[0].id;
+    const patientId = patient[0].id;
 
     fireEvent.click(viewButton);
     
-    expect(navigate).toHaveBeenCalledWith(`/Patient/${patientId}`);
+    expect(mockNav).toHaveBeenCalledWith(`/Patient/${patientId}`);
   });
 });
