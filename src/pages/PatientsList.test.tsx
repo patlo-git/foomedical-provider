@@ -3,15 +3,23 @@ import { MedplumProvider } from '@medplum/react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import crypto from 'crypto';
 import React from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { TextEncoder } from 'util';
 import { PatientsList } from './PatientsList';
 
-async function setup(url='/patients', medplum = new MockClient()): Promise<void> {
+const mockNavigate = jest.fn();
+
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom') as any,
+  useNavigate: () => mockNavigate,
+}));
+
+const medplum = new MockClient();
+
+async function setup(): Promise<void> {
   await act(async() => {
     render(
-      <MemoryRouter
-        initialEntries={[url]} initialIndex={0}>
+      <MemoryRouter>
         <MedplumProvider medplum={medplum}>
           <PatientsList />
         </MedplumProvider>
@@ -25,16 +33,20 @@ describe('Patients list', () => {
     window.localStorage.clear();
     await setup();
   });
-
+  
   beforeAll(() => {
     Object.defineProperty(global, 'TextEncoder', {
       value: TextEncoder,
     });
-
+    
     Object.defineProperty(global.self, 'crypto', {
       value: crypto.webcrypto,
     });
   });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  })
 
   test('Patients header', async () => {
     expect(screen.getByRole('heading', { name: 'Patients' })).toBeInTheDocument();
@@ -65,11 +77,14 @@ describe('Patients list', () => {
     expect(importButton).toBeInTheDocument();
   });
   
-  test('Renders "View" button', async () => {
+  test('"View" button navigates to patient page', async () => {
     const viewButton = screen.getAllByRole('button', { name: 'View' })[0];
+    const patients = medplum.searchResources('Patient').read();
+
+    const patientId = patients[0].id;
 
     fireEvent.click(viewButton);
-
-    expect(viewButton).toBeInTheDocument();
+    
+    expect(mockNavigate).toHaveBeenCalledWith(`/Patient/${patientId}`);
   });
 });
