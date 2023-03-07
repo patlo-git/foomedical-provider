@@ -26,15 +26,17 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Loading } from '../components/Loading';
 import { PatientHeader } from './PatientHeader';
 import { TaskHeader } from './TaskHeader';
+import {randomUUID} from 'crypto';
+import { MockClient } from '@medplum/mock';
 
 interface PatientGraphQLResponse {
   data: {
     patient: Patient;
     appointments: Appointment[];
-    orders: ServiceRequest[];
-    reports: DiagnosticReport[];
-    requestGroups: RequestGroup[];
-    clinicalNotes: DocumentReference[];
+    // orders: ServiceRequest[];
+    // reports: DiagnosticReport[];
+    // requestGroups: RequestGroup[];
+    // clinicalNotes: DocumentReference[];
   };
 }
 
@@ -49,11 +51,53 @@ export function PatientPage(): JSX.Element {
   const medplum = useMedplum();
   const resource = (resourceId && medplum.readResource(params.tab as ResourceType, resourceId).read()) as Resource;
 
+  // what is the initial response?
+  // which I realize is a weird question.
+  // how do you have a response to nothing?
+  // so maybe that makes sense that we don't have an itial response since it looks like to me that we're not calling useState with anything.
+  // and aren't we just setting the type of our two variables to be PatientGraphQLResponse?
+  // response here is the reactive data or state
+  // but what's response's value?
   const [response, setResponse] = useState<PatientGraphQLResponse>();
+
+  const mockClient = new MockClient();
+
+  const exampleMrn = randomUUID();
+  const patientData: Patient = {
+    resourceType: 'Patient',
+    name: [{ given: ['Mia'], family: 'Wallace' }],
+    birthDate: '2070-01-01',
+    gender: 'female',
+    identifier: [
+      {
+        system: 'https://namespace.example.health/',
+        value: exampleMrn,
+      },
+    ],
+  };
+
+  const appointments: Appointment = {
+    resourceType: 'Appointment',
+    id: patientData.id,
+    status: 'booked',
+    participant: [patientData]
+  };
+  
+  let appointment;
+
+  async function getAppointments() {
+    appointment = await mockClient.createResource<Appointment>(appointments);
+    return appointment;
+  }
+
+  appointment = [];
+
+
+  getAppointments();
 
   useEffect(() => {
     const query = `{
-      patient: Patient(id: "${id}") {
+      patient: Patient(id: "${patientData.id}") {
         resourceType,
         id,
         meta { lastUpdated },
@@ -63,46 +107,13 @@ export function PatientPage(): JSX.Element {
         address { line, city, state },
         photo { contentType, url }
       },
-      appointments: AppointmentList(actor: "Patient/${id}") {
+      appointments: AppointmentList(actor: "Patient/${patientData.id}") {
         resourceType,
         id,
-        meta { lastUpdated },
-        serviceCategory { text, coding { code, display } },
-        serviceType { text, coding { code, display } },
-        start,
-        end,
         status
-      },
-      orders: ServiceRequestList(subject: "Patient/${id}") {
-        resourceType,
-        id,
-        meta { lastUpdated },
-        category { text, coding { code, display } },
-        code { text, coding { code, display } },
-        status
-      },
-      reports: DiagnosticReportList(subject: "Patient/${id}") {
-        resourceType,
-        id,
-        meta { lastUpdated },
-        code { text }
-      },
-      requestGroups: RequestGroupList(subject: "Patient/${id}") {
-        resourceType,
-        id,
-        status,
-        meta { lastUpdated },
-        code { text },
-        action { id, title, resource { reference } }
-      },
-      clinicalNotes: DocumentReferenceList(category: "clinical-note" patient: "Patient/${id}") {
-        resourceType,
-        id,
-        description,
-        type { text, coding { code } }
-        content { attachment { url} }
       }
     }`;
+    // graphql is a readonly method on @medplum/core/medplumclient
     medplum.graphql(query).then(setResponse);
   }, [medplum, id]);
 
@@ -110,18 +121,13 @@ export function PatientPage(): JSX.Element {
     return <Loading />;
   }
 
-  const { patient, appointments, orders, reports, requestGroups, clinicalNotes } = response.data;
-
-  const allResources = [...appointments, ...orders, ...reports];
-  allResources.sort((a, b) => (a.meta?.lastUpdated as string).localeCompare(b.meta?.lastUpdated as string));
-
   const tab = resolveTab(params.tab);
 
   return (
     <>
       {taskId && <TaskHeader taskId={taskId} />}
-      <PatientHeader key={id} patient={patient} />
-      <Tabs value={tab} onTabChange={(newTab) => navigate(`/Patient/${id}/${newTab}?task=${taskId}`)}>
+      <PatientHeader key={patientData.id} patient={patientData} />
+      <Tabs value={tab} onTabChange={(newTab) => navigate(`/Patient/${patientData.id}/${newTab}?task=${taskId}`)}>
         <Paper>
           <ScrollArea>
             <Tabs.List style={{ whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
@@ -136,19 +142,16 @@ export function PatientPage(): JSX.Element {
           </ScrollArea>
         </Paper>
         <Document>
-          <Tabs.Panel value="overview">
-            <OverviewTab id={id} taskId={taskId} allResources={allResources} />
-          </Tabs.Panel>
           <Tabs.Panel value="visits">
-            <VisitsTab appointments={appointments} />
+            <VisitsTab appointments={appointment} />
           </Tabs.Panel>
-          <Tabs.Panel value="labreports">
+          {/* <Tabs.Panel value="labreports">
             <LabAndImagingTab patient={patient} orders={orders} resource={resource} />
-          </Tabs.Panel>
+          </Tabs.Panel> */}
           <Tabs.Panel value="medication">
-            <MedicationTab patient={patient} />
+            <MedicationTab patient={patientData} />
           </Tabs.Panel>
-          <Tabs.Panel value="careplans">
+          {/* <Tabs.Panel value="careplans">
             <CarePlansTab requestGroups={requestGroups} />
           </Tabs.Panel>
           <Tabs.Panel value="forms">
@@ -156,7 +159,7 @@ export function PatientPage(): JSX.Element {
           </Tabs.Panel>
           <Tabs.Panel value="clinicalnotes">
             <ClinicalNotesTab clinicalNotes={clinicalNotes} />
-          </Tabs.Panel>
+          </Tabs.Panel> */}
         </Document>
       </Tabs>
     </>

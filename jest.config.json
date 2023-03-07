@@ -4,7 +4,10 @@
     "^.+\\.(js|jsx|ts|tsx)$": "babel-jest"
   },
   "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "node"],
-  "testMatch": ["**/src/**/*.test.ts", "**/src/**/*.test.tsx"],
+  "moduleNameMapper": {
+    "\\.css$": "identity-obj-proxy"
+  },
+  "testMatch": ["**/src/**/*.test.ts", "**/src/**/*.test.tsx", "**/src/*.test.js"],
   "setupFilesAfterEnv": ["./src/test.setup.ts"],
   "coverageDirectory": "coverage",
   "coverageReporters": ["lcov", "json", "text"],
