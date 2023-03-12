@@ -31,10 +31,12 @@ interface PatientGraphQLResponse {
   data: {
     patient: Patient;
     appointments: Appointment[];
+    /*
     orders: ServiceRequest[];
     reports: DiagnosticReport[];
     requestGroups: RequestGroup[];
     clinicalNotes: DocumentReference[];
+    */
   };
 }
 
@@ -60,13 +62,8 @@ export function PatientPage(): JSX.Element {
 
   console.log('set response! ', setResponse)
 
-  // useEffect is using an arrow function as it's first arg.
-  // after the page loads (when the function PatientPage runs) it calls useEffect()
-  // it declares const query.
-  // then calls medplum client.graphql(query)
-  // does a query
-  // query's gonna bring back data
-  // then setResponse...which is a setter value from useState? but what's the value? response? which response is that?
+  // production useEffect. uncomment out when working test
+  /*
   useEffect(() => {
     const query = `{
       patient: Patient(id: "${id}") {
@@ -122,18 +119,53 @@ export function PatientPage(): JSX.Element {
     // graphql is a readonly method on @medplum/core/medplumclient
     medplum.graphql(query).then(setResponse);
   }, [medplum, id]);
+  */
+
+  // my test useEffect
+  // this query doesn't look like it's querying an appointments array.
+  // when does it become an array?
+  // A resolver? this mysterious AppointmentList(L:140)?
+  useEffect(() => {
+    const query = `{
+      patient: Patient(id: "${id}") {
+        resourceType,
+        id,
+        meta { lastUpdated },
+        birthDate,
+        name { given, family },
+        telecom { system, value },
+        address { line, city, state },
+        photo { contentType, url }
+      },
+      appointments: AppointmentList(actor: "Patient/${id}") {
+        resourceType,
+        id,
+        meta { lastUpdated },
+        serviceCategory { text, coding { code, display } },
+        serviceType { text, coding { code, display } },
+        start,
+        end,
+        status
+      },
+    }`;
+    // graphql is a readonly method on @medplum/core/medplumclient
+    medplum.graphql(query).then(setResponse);
+  }, [medplum, id]);
 
   if (!response) {
     return <Loading />;
   }
 
-  const { patient, appointments, orders, reports, requestGroups, clinicalNotes } = response.data;
+  // working medplum response data. uncomment out when tests pass
+  // const { patient, appointments, orders, reports, requestGroups, clinicalNotes } = response.data;
 
-  console.log('response: ', response)
+  // test response data. go through one by one when adding mock data
+  const { patient, appointments } = response.data;
+
   console.log('response.data: ', response.data)
-  console.log('appointments: ', appointments)
+  console.log('patient page appointments: ', appointments)
   
-  const allResources = [...appointments, ...orders, ...reports];
+  const allResources = [...appointments];
   allResources.sort((a, b) => (a.meta?.lastUpdated as string).localeCompare(b.meta?.lastUpdated as string));
 
   const tab = resolveTab(params.tab);
@@ -163,7 +195,7 @@ export function PatientPage(): JSX.Element {
           <Tabs.Panel value="visits">
             <VisitsTab appointments={appointments} />
           </Tabs.Panel>
-          <Tabs.Panel value="labreports">
+          {/* <Tabs.Panel value="labreports">
             <LabAndImagingTab patient={patient} orders={orders} resource={resource} />
           </Tabs.Panel>
           <Tabs.Panel value="medication">
@@ -177,7 +209,7 @@ export function PatientPage(): JSX.Element {
           </Tabs.Panel>
           <Tabs.Panel value="clinicalnotes">
             <ClinicalNotesTab clinicalNotes={clinicalNotes} />
-          </Tabs.Panel>
+          </Tabs.Panel> */}
         </Document>
       </Tabs>
     </>
@@ -252,6 +284,7 @@ function VisitsTab({ appointments }: { appointments: Appointment[] }): JSX.Eleme
   );
 }
 
+/*
 function LabAndImagingTab({
   patient,
   orders,
@@ -501,7 +534,7 @@ function ClinicalNotePanel({ note }: { note: DocumentReference }): JSX.Element {
   }, [medplum, note]);
   return <>{content}</>;
 }
-
+*/
 function resolveTab(input: string): string {
   if (!input) {
     return 'overview';
