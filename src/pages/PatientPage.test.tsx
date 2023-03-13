@@ -1,255 +1,158 @@
-import { MockClient } from '@medplum/mock';
+import { MockClient, HomerSimpson, HomerServiceRequest } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { Appointment, ServiceRequest, Observation, DiagnosticReport, RequestGroup, DocumentReference } from '@medplum/fhirtypes';
-import { createReference } from '@medplum/core';
-import { act, render } from '@testing-library/react';
+import { act, render, waitFor, screen } from '@testing-library/react';
 import crypto, { randomUUID } from 'crypto';
-import React, { useEffect, useState as useStateMock } from 'react';
+import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { TextEncoder } from 'util';
 import { PatientPage } from './PatientPage';
-import { PatientsList } from './PatientsList';
-
-// jest.mock('react', ()=>({
-//   ...jest.requireActual('react'),
-//   useState: jest.fn()
-// }))
-
-// jest.mock('react-router-dom', () => ({
-//   ...jest.requireActual('react-router-dom') as any,
-//   useNavigate: () => mockNavigate,
-// }));
-
-// for resize observer Reference Error I was getting
-// global.ResizeObserver = jest.fn().mockImplementation(() => ({
-//   observe: jest.fn(),
-//   unobserve: jest.fn(),
-//   disconnect: jest.fn(),
-// }));
+import { createReference } from '@medplum/core';
 
 const mockClient = new MockClient();
 
-async function setup(url: string): Promise<void> {
-  await act(async() => {
-    render(
-      <MemoryRouter initialEntries={[url]}>
-        <MedplumProvider medplum={mockClient}>
-          <PatientsList />
-        </MedplumProvider>
-      </MemoryRouter>
-    );
-  })
-}
+// mocking graphql response for PatientPage query
+mockClient.graphql = jest.fn((query: string) => {
+  const data: Record<string, unknown> = {};
+  data.patient = {
+    resourceType: HomerSimpson.resourceType, 
+    id: HomerSimpson.id,
+    meta: HomerSimpson.meta,
+    birthdate: [HomerSimpson.birthDate],
+    name: HomerSimpson.name,
+    telecom: HomerSimpson.telecom,
+    address: HomerSimpson.address,
+    photo: HomerSimpson.photo
+  };
 
-describe('Patient Page', () => {
-  const setState = jest.fn();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const useStateMock: any = (initState: any) => [initState, setState];
-
-  beforeEach(async () => {
-    window.localStorage.clear();
-  });
-  
-  beforeAll(() => {
-    Object.defineProperty(global, 'TextEncoder', {
-      value: TextEncoder,
-    });
-    
-    Object.defineProperty(global.self, 'crypto', {
-      value: crypto.webcrypto,
-    });
-  });
-
-  afterEach(() => {
-    jest.resetAllMocks();
-  })
-
-  test.skip("Patient Page calls setState", async () => {
-    jest.spyOn(React, 'useState').mockImplementation(useStateMock);
-
-    await setup(`/Patient/123`);
-    
-    expect(setState).toHaveBeenCalledTimes(1);
-  });
-
-  test("Mock Client has resources", async () => {
-    // jest.spyOn(React, 'useState').mockImplementation(useStateMock);
-
-    // Patient
-    const patient = await mockClient.readResource('Patient', '123');
-    console.log('patient: ', patient)
-
-    // Appointments
-    const mockAppointment: Appointment = {
-        resourceType: 'Appointment',
-        participant: [patient],
-        // meta: { lastUpdated },
-        serviceCategory: [{
+  console.log('patient data: ', data.patient);
+  // modelled after Medplum mock patient, 'Kay Raynor'
+  data.appointments = [
+    {
+      resourceType: 'Appointment',
+      id: randomUUID(),
+      meta: {
+        lastUpdated: "2023-03-28T22:42:02.818Z"
+      },
+      serviceCategory: [
+        {
           text: 'Counselling',
-          coding: [{
-            code: '8',
-            display: 'Counselling',
-          }]
-        }],
-        serviceType: [{
+          coding: [
+            {
+              code: '8',
+              display: 'Counselling',
+            }
+          ]
+        }
+      ],
+      serviceType: [
+        {
           text: 'Crisis Assistance',
-          coding: [{
-            code: '309',
-            display: 'Crisis Assistance'
-          }]
-        }],
-        start: "2023-09-22T05:49:00.000Z",
-        end: "2023-09-22T06:49:00.000Z",
-        status: 'proposed',
-      };
+          coding: [
+            {
+              code: '309',
+              display: 'Crisis Assistance'
+            }
+          ]
+        }
+      ],
+      start: "2023-05-16T05:49:00.000Z",
+      end: "2023-05-16T06:49:00.000Z",
+      status: 'proposed',
+    },
+  ];
 
-    const mockAppointments = await mockClient.createResource(mockAppointment);
-  
-    console.log('mockAppointments: ', mockAppointments);
-    /*
-    // Orders
-    const serviceRequestData: ServiceRequest = {
+  // partially modelled after Medplum mock patient, 'Russell Kuhn'
+  data.orders = [
+    {
       resourceType: 'ServiceRequest',
-      subject: createReference(patient), // link this ServiceRequest to the Patient
+      // link this ServiceRequest to the Patient
+      subject: createReference(HomerSimpson),
+      id: '773',
+      meta: {
+        lastUpdated: '2023-03-29T16:55:02.818Z'
+      },
+      category: {
+        text: 'Imaging',
+        coding: {
+          code: '363679005',
+          display: 'Imaging',
+        }
+      },
       code: {
+        text: 'Cranial MRI',
         coding: [
           {
-            system: 'https://samplelab.com/tests',
-            code: 'SAMPLE_SKU',
+            system: 'http://snomed.info/sct',
+            code: '96894-1',
+            display: 'Cranial MRI',
           },
         ],
       },
-      // status and intent are required but not on the PatientPage query
-      // the above is from the Medplum docs of creating Fhir data, so why didn't they add these "required" properties?
-    };
+      status: 'completed',
+    }
+  ];
 
-    const serviceRequest = await mockClient.createResource(serviceRequestData);
-    console.log('service request: ', serviceRequest)
-
-    // Reports - Diagnostic Report
-    // create the observations then the report
-    // they're tied to Service Request
-    // Observation type 
-
-    // Create two observations from the array
-    const observationData: Observation[] = [
-      {
-        resourceType: 'Observation',
-        basedOn: [createReference(serviceRequest)], // Connect this Observation to the ServiceRequest
-        subject: createReference(patient), // Connect this Observation to the Patient
-        status: 'preliminary',
-        code: {
-          coding: [
-            {
-              system: 'https://samplelabtests.com/tests',
-              code: 'A1c',
-              display: 'A1c',
-            },
-          ],
-        },
-        valueQuantity: {
-          value: 5.7,
-          unit: 'mg/dL',
-          system: 'http://unitsofmeasure.org',
-          code: 'mg/dL',
-        },
-      },
-      {
-        resourceType: 'Observation',
-        basedOn: [createReference(serviceRequest)], // Connect this Observation to the ServiceRequest
-        subject: createReference(patient), // Connect this Observation to the Patient
-        status: 'preliminary',
-        code: {
-          coding: [
-            {
-              system: 'https://samplelabtests.com/tests',
-              code: 'blood_glucose',
-              display: 'Blood Glucose',
-            },
-          ],
-        },
-        valueQuantity: {
-          value: 100,
-          unit: 'mg/dL',
-          system: 'http://unitsofmeasure.org',
-          code: 'mg/dL',
-        },
-      },
-    ];
-
-    // Map through the observation data to create all the observations
-    const observations = await Promise.all(observationData.map(async (data) => mockClient.createResource(data)));
-
-    // we've created the observations now to create the report
-    const reportData: DiagnosticReport = {
+  // modeled after Medplum mock patient, 'Gerardo Green'
+  data.reports = [
+    {
       resourceType: 'DiagnosticReport',
-      basedOn: [createReference(serviceRequest)], // Connect this DiagnosticReport to the ServiceRequest
-      subject: createReference(patient), // Connect this DiagnosticReport to the Patient,
-      status: 'preliminary',
-      code: {
-        coding: [
-          {
-            system: 'https://samplelab.com/testpanels',
-            code: 'SAMPLE_SKU',
-          },
-        ],
-      },
-      result: observations.map(createReference), // Create an array of references to the relevant observations
-    };
-    const reports = await mockClient.createResource(reportData);
-    console.log('Created Report result', reports.result);
-
-    // Request Groups
-    // why isn't it giving me errors about other required props like it does about resource group?
-    // Property 'resourceType' is missing in type '{}' but required in type 'RequestGroup'
-    const requestGroups: RequestGroup = {
-      resourceType: 'RequestGroup', 
+      id: '0af4b01b-092e-4be6-9f7e-41bc7a134a41',
+      meta:
+        {
+          lastUpdated: '2023-03-29T17:38:02.818Z',
+        },
+      code:
+        {
+          text: 'Diagnostic Report',
+        }
     }
-
-    // Clinical Notes
-    const clinicalNotes: DocumentReference = {
-      resourceType: 'DocumentReference',
-    }
-    */
+  ];
   
-    // const mockResponse = {
-    //   data: {
-    //     patient: patient,
-    //     appointments: [mockAppointments],
-    //     orders: [serviceRequest],
-    //     reports: [reports],
-    //     requestGroups: [requestGroups],
-    //     clinicalNotes: [clinicalNotes],
-    //   }
-    // }
+  // modelled after mock patient, 'Ryan Baily'
+  data.requestGroups = [
+    {
+      resourceType: 'RequestGroup',
+      id: randomUUID(),
+      status: 'draft',
+      meta:
+      {
+        lastUpdated: '2023-03-29T17:50:02.818Z',
+      },
+      code: null,
+      action: [
+        {
+          id: null,
+          title: 'Request COVID-19 Symptoms Assessment',
+          resource:
+          {
+            reference: 'Task/7dd575f4-1444-4455-bdb9-7d630db90ce0'
+          },
+        }
+      ]
+    }
+  ];
+  
+  data.clinicalNotes = [
+    {
+      resourceType: 'DocumentReference',
+      id: randomUUID(),
+      description: 'This is a clinical note',
+      type: {
+        text: 'Progress Note',
+        coding:
+        {
+          code: '867',
+        }
+      },
+      content: 
+        {
+          attachment: {
+            url: 'https://hl7.org/fhir/us/core/stu3.1.1/StructureDefinition-us-core-documentreference.html',
+          }
+        },
+    }
+  ];
 
-    await setup(`/Patient/${patient.id}`);
-
-    expect('Overview').toBeInTheDocument;
-    expect('Visits').toBeInTheDocument;
-    expect('Labs & Imaging').toBeInTheDocument;
-    // expect(setState).toHaveBeenCalledTimes(2);
-
-    // await waitFor(() => screen.getByText('Overview'));
-
-    // expect(screen.getByText('Overview')).toBeInTheDocument();
-  });
-
-  test.skip('graphql', async () => {
-    const medplum = new MockClient();
-    const result = await medplum.graphql(`{
-      patient: Patient(id: "123") {
-        resourceType,
-        id,
-        meta { lastUpdated },
-        birthDate,
-        name { given, family },
-        telecom { system, value },
-        address { line, city, state },
-        photo { contentType, url }
-      }`);
-    console.log(result);
-    expect(result).toBeDefined();
-  });
+  return Promise.resolve({ data });
 });
