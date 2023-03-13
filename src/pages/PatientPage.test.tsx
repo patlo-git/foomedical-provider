@@ -34,7 +34,7 @@ async function setup(url: string): Promise<void> {
     render(
       <MemoryRouter initialEntries={[url]}>
         <MedplumProvider medplum={mockClient}>
-          <PatientsList />
+          <PatientPage />
         </MedplumProvider>
       </MemoryRouter>
     );
@@ -229,7 +229,20 @@ describe('Patient Page', () => {
     expect('Overview').toBeInTheDocument;
     expect('Visits').toBeInTheDocument;
     expect('Labs & Imaging').toBeInTheDocument;
-    // expect(setState).toHaveBeenCalledTimes(2);
+
+    const mockResult = await mockClient.graphql(
+      `patient: Patient(id: '${patient.id}') {
+          resourceType
+          id
+          name {
+            given
+            family
+          }
+        }
+      }`
+    );
+    
+    console.log('graphql result', await mockResult);
 
     // await waitFor(() => screen.getByText('Overview'));
 
