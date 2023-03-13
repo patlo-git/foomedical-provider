@@ -17,7 +17,7 @@
     "@mantine/core": "5.7.1",
     "@mantine/hooks": "5.7.1",
     "@mantine/notifications": "5.7.1",
-    "@medplum/core": "1.0.5",
+    "@medplum/core": "2.0.7",
     "@medplum/fhirtypes": "1.0.5",
     "@medplum/react": "1.0.5",
     "@medplum/mock": "^1.0.5",
