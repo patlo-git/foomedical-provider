@@ -27,9 +27,7 @@ import { PatientsList } from './PatientsList';
 //   disconnect: jest.fn(),
 // }));
 
-const mockClient = new MockClient();
-
-async function setup(url: string): Promise<void> {
+async function setup(url: string, mockClient = new MockClient()): Promise<void> {
   await act(async() => {
     render(
       <MemoryRouter initialEntries={[url]}>
@@ -42,10 +40,10 @@ async function setup(url: string): Promise<void> {
 }
 
 describe('Patient Page', () => {
-  const setState = jest.fn();
+  // const setState = jest.fn();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const useStateMock: any = (initState: any) => [initState, setState];
+  // // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // const useStateMock: any = (initState: any) => [initState, setState];
 
   beforeEach(async () => {
     window.localStorage.clear();
@@ -75,10 +73,11 @@ describe('Patient Page', () => {
 
   test("Mock Client has resources", async () => {
     // jest.spyOn(React, 'useState').mockImplementation(useStateMock);
+    const mockClient = new MockClient();
 
     // Patient
     const patient = await mockClient.readResource('Patient', '123');
-    console.log('patient: ', patient)
+    console.log('patient: ', patient);
 
     // Appointments
     const mockAppointment: Appointment = {
@@ -105,8 +104,8 @@ describe('Patient Page', () => {
       };
 
     const mockAppointments = await mockClient.createResource(mockAppointment);
-  
-    console.log('mockAppointments: ', mockAppointments);
+
+    console.log('read mock appointments: ', await mockClient.readResource('Appointment', `${mockAppointments.id}`))
     /*
     // Orders
     const serviceRequestData: ServiceRequest = {
@@ -224,25 +223,25 @@ describe('Patient Page', () => {
     //   }
     // }
 
-    await setup(`/Patient/${patient.id}`);
+    await setup(`/Patient/${patient.id}`, mockClient);
 
     expect('Overview').toBeInTheDocument;
     expect('Visits').toBeInTheDocument;
     expect('Labs & Imaging').toBeInTheDocument;
 
-    const mockResult = await mockClient.graphql(
-      `patient: Patient(id: '${patient.id}') {
-          resourceType
-          id
-          name {
-            given
-            family
-          }
-        }
-      }`
-    );
+    // const mockResult = await mockClient.graphql(
+    //   `patient: Patient(id: '${patient.id}') {
+    //       resourceType
+    //       id
+    //       name {
+    //         given
+    //         family
+    //       }
+    //     }
+    //   }`
+    // );
     
-    console.log('graphql result', await mockResult);
+    // console.log('graphql result', await mockResult);
 
     // await waitFor(() => screen.getByText('Overview'));
 
