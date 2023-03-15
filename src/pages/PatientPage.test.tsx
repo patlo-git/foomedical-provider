@@ -64,11 +64,11 @@ describe('Patient Page', () => {
   })
 
   test.skip("Patient Page calls setState", async () => {
-    jest.spyOn(React, 'useState').mockImplementation(useStateMock);
+    // jest.spyOn(React, 'useState').mockImplementation(useStateMock);
 
-    await setup(`/Patient/123`);
+    // await setup(`/Patient/123`);
     
-    expect(setState).toHaveBeenCalledTimes(1);
+    // expect(setState).toHaveBeenCalledTimes(1);
   });
 
   test("Mock Client has resources", async () => {

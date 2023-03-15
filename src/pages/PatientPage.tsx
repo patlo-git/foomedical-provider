@@ -1,5 +1,5 @@
 import { Accordion, Button, Group, Paper, ScrollArea, Tabs, Text } from '@mantine/core';
-import { formatDateTime, getPropertyDisplayName } from '@medplum/core';
+import { formatDateTime, getPropertyDisplayName, QueryTypes } from '@medplum/core';
 import {
   Appointment,
   CodeableConcept,
@@ -21,6 +21,7 @@ import {
   StatusBadge,
   useMedplum,
 } from '@medplum/react';
+import { GraphQLObjectType } from 'graphql';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Loading } from '../components/Loading';
@@ -126,7 +127,7 @@ export function PatientPage(): JSX.Element {
   // when does it become an array?
   // A resolver? this mysterious AppointmentList(L:140)?
   useEffect(() => {
-    const query = `{
+    const query: QueryTypes = `{
       patient: Patient(id: "${id}") {
         resourceType,
         id,
@@ -148,7 +149,6 @@ export function PatientPage(): JSX.Element {
         status
       },
     }`;
-    // graphql is a readonly method on @medplum/core/medplumclient
     medplum.graphql(query).then(setResponse);
   }, [medplum, id]);
 
