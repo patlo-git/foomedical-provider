@@ -127,7 +127,7 @@ export function PatientPage(): JSX.Element {
   // when does it become an array?
   // A resolver? this mysterious AppointmentList(L:140)?
   useEffect(() => {
-    const query: QueryTypes = `{
+    const query = `{
       patient: Patient(id: "${id}") {
         resourceType,
         id,

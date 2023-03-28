@@ -18,7 +18,6 @@
     "@mantine/hooks": "5.7.1",
     "@mantine/notifications": "5.7.1",
     "@medplum/core": "2.0.7",
-    "@medplum/fhir-router": "^2.0.7",
     "@medplum/fhirtypes": "2.0.7",
     "@medplum/mock": "^2.0.7",
     "@medplum/react": "2.0.7",

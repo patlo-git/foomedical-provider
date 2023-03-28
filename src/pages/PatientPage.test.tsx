@@ -1,43 +1,65 @@
-import { MockClient } from '@medplum/mock';
+import { MockClient, HomerSimpson, HomerServiceRequest } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { Appointment, ServiceRequest, Observation, DiagnosticReport, RequestGroup, DocumentReference } from '@medplum/fhirtypes';
-import { createReference } from '@medplum/core';
-import { act, render } from '@testing-library/react';
+import { act, render, waitFor, screen } from '@testing-library/react';
 import crypto, { randomUUID } from 'crypto';
 import React, { useEffect, useState as useStateMock } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { TextEncoder } from 'util';
 import { PatientPage } from './PatientPage';
-import { PatientsList } from './PatientsList';
+// import { PatientsList } from './PatientsList';
 
-// jest.mock('react', ()=>({
-//   ...jest.requireActual('react'),
-//   useState: jest.fn()
-// }))
+const mockClient = new MockClient();
 
-// jest.mock('react-router-dom', () => ({
-//   ...jest.requireActual('react-router-dom') as any,
-//   useNavigate: () => mockNavigate,
-// }));
+mockClient.graphql = jest.fn((query: string) => {
+  const data: Record<string, unknown> = {};
+  data.patient = [HomerSimpson];
+  data.appointments = [{
+    resourceType: 'Appointment',
+    id: '227',
+    participant: [HomerSimpson],
+    // meta: { lastUpdated },
+    serviceCategory: [{
+      text: 'Counselling',
+      coding: [{
+        code: '8',
+        display: 'Counselling',
+      }]
+    }],
+    serviceType: [{
+      text: 'Crisis Assistance',
+      coding: [{
+        code: '309',
+        display: 'Crisis Assistance'
+      }]
+    }],
+    start: "2023-09-22T05:49:00.000Z",
+    end: "2023-09-22T06:49:00.000Z",
+    status: 'proposed',
+  },
+  ];
+
+  return Promise.resolve({ data });
+});
 
 // for resize observer Reference Error I was getting
-// global.ResizeObserver = jest.fn().mockImplementation(() => ({
-//   observe: jest.fn(),
-//   unobserve: jest.fn(),
-//   disconnect: jest.fn(),
-// }));
+global.ResizeObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}));
 
-async function setup(url: string, mockClient = new MockClient()): Promise<void> {
-  await act(async() => {
+function setup(): void {
+
     render(
-      <MemoryRouter initialEntries={[url]}>
+      <MemoryRouter>
         <MedplumProvider medplum={mockClient}>
           <PatientPage />
         </MedplumProvider>
       </MemoryRouter>
     );
-  })
-}
+  
+};
 
 describe('Patient Page', () => {
   // const setState = jest.fn();
@@ -71,41 +93,72 @@ describe('Patient Page', () => {
     // expect(setState).toHaveBeenCalledTimes(1);
   });
 
-  test("Mock Client has resources", async () => {
+  test.skip("Mock Client has resources", async () => {
     // jest.spyOn(React, 'useState').mockImplementation(useStateMock);
-    const mockClient = new MockClient();
-
+    
     // Patient
     const patient = await mockClient.readResource('Patient', '123');
     console.log('patient: ', patient);
-
+    
     // Appointments
     const mockAppointment: Appointment = {
-        resourceType: 'Appointment',
-        participant: [patient],
-        // meta: { lastUpdated },
-        serviceCategory: [{
-          text: 'Counselling',
-          coding: [{
-            code: '8',
-            display: 'Counselling',
-          }]
-        }],
-        serviceType: [{
-          text: 'Crisis Assistance',
-          coding: [{
-            code: '309',
-            display: 'Crisis Assistance'
-          }]
-        }],
+      resourceType: 'Appointment',
+      participant: [patient],
+      // meta: { lastUpdated },
+      serviceCategory: [{
+        text: 'Counselling',
+        coding: [{
+          code: '8',
+          display: 'Counselling',
+        }]
+      }],
+      serviceType: [{
+        text: 'Crisis Assistance',
+        coding: [{
+          code: '309',
+          display: 'Crisis Assistance'
+        }]
+      }],
         start: "2023-09-22T05:49:00.000Z",
         end: "2023-09-22T06:49:00.000Z",
         status: 'proposed',
       };
-
+      
     const mockAppointments = await mockClient.createResource(mockAppointment);
-
+    
     console.log('read mock appointments: ', await mockClient.readResource('Appointment', `${mockAppointments.id}`))
+
+    await setup(`/Patient`);
+
+    const mockResult = await mockClient.graphql(
+      `query GetPatientById($patientId: ID!) {
+        Patient(id: $patientId) {
+          resourceType
+          id
+          name {
+            given
+            family
+          }
+        }
+      }`,
+      'GetPatientById',
+      { patientId: '123' }
+    );
+    
+    console.log('graphql result', mockResult);
+    
+    // taken from medplum/core client.test.ts
+    // expect(result).toBeDefined();
+    // expect((result as any).request.url).toBe('https://x/fhir/R4/$graphql');
+    // expect((result as any).request.options.method).toBe('POST');
+
+    // expect((result as any).request.options.headers['Content-Type']).toBe('application/json');
+
+    // const body = JSON.parse((result as any).request.options.body);
+    // expect(body.operationName).toBe('GetPatientById');
+    // expect(body.query).toBeDefined();
+    // expect(body.variables).toBeDefined();
+    
     /*
     // Orders
     const serviceRequestData: ServiceRequest = {
@@ -223,29 +276,14 @@ describe('Patient Page', () => {
     //   }
     // }
 
-    await setup(`/Patient/${patient.id}`, mockClient);
-
     expect('Overview').toBeInTheDocument;
     expect('Visits').toBeInTheDocument;
     expect('Labs & Imaging').toBeInTheDocument;
 
-    // const mockResult = await mockClient.graphql(
-    //   `patient: Patient(id: '${patient.id}') {
-    //       resourceType
-    //       id
-    //       name {
-    //         given
-    //         family
-    //       }
-    //     }
-    //   }`
-    // );
-    
-    // console.log('graphql result', await mockResult);
 
-    // await waitFor(() => screen.getByText('Overview'));
+    await waitFor(() => screen.getByText('Overview'));
 
-    // expect(screen.getByText('Overview')).toBeInTheDocument();
+    expect(screen.getByText('Overview')).toBeInTheDocument();
   });
 
   test.skip('graphql', async () => {
@@ -264,4 +302,15 @@ describe('Patient Page', () => {
     console.log(result);
     expect(result).toBeDefined();
   });
+
+  test('Mock graphql return data', async () => {
+    setup();
+
+    expect(mockClient.graphql).toBeCalledTimes(1);
+
+    const appointment = await waitFor(() => screen.getByText('Counselling'));
+
+    expect(appointment).toBeInTheDocument();
+  });
+  
 });
