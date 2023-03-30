@@ -31,12 +31,10 @@ interface PatientGraphQLResponse {
   data: {
     patient: Patient;
     appointments: Appointment[];
-    /*
     orders: ServiceRequest[];
     reports: DiagnosticReport[];
     requestGroups: RequestGroup[];
     clinicalNotes: DocumentReference[];
-    */
   };
 }
 
@@ -51,19 +49,8 @@ export function PatientPage(): JSX.Element {
   const medplum = useMedplum();
   const resource = (resourceId && medplum.readResource(params.tab as ResourceType, resourceId).read()) as Resource;
 
-  // what is the initial response?
-  // which I realize is a weird question.
-  // how do you have a response to nothing?
-  // so maybe that makes sense that we don't have an itial response since it looks like to me that we're not calling useState with anything.
-  // and aren't we just setting the type of our two variables to be PatientGraphQLResponse?
-  // response here is the reactive data or state
-  // but what's response's value?
   const [response, setResponse] = useState<PatientGraphQLResponse>();
 
-  console.log('set response! ', setResponse)
-
-  // production useEffect. uncomment out when working test
-  /*
   useEffect(() => {
     const query = `{
       patient: Patient(id: "${id}") {
@@ -116,39 +103,6 @@ export function PatientPage(): JSX.Element {
         content { attachment { url} }
       }
     }`;
-    // graphql is a readonly method on @medplum/core/medplumclient
-    medplum.graphql(query).then(setResponse);
-  }, [medplum, id]);
-  */
-
-  // my test useEffect
-  // this query doesn't look like it's querying an appointments array.
-  // when does it become an array?
-  // A resolver? this mysterious AppointmentList(L:140)?
-  useEffect(() => {
-    const query = `{
-      patient: Patient(id: "${id}") {
-        resourceType,
-        id,
-        meta { lastUpdated },
-        birthDate,
-        name { given, family },
-        telecom { system, value },
-        address { line, city, state },
-        photo { contentType, url }
-      },
-      appointments: AppointmentList(actor: "Patient/${id}") {
-        resourceType,
-        id,
-        meta { lastUpdated },
-        serviceCategory { text, coding { code, display } },
-        serviceType { text, coding { code, display } },
-        start,
-        end,
-        status
-      },
-    }`;
-    // graphql is a readonly method on @medplum/core/medplumclient
     medplum.graphql(query).then(setResponse);
   }, [medplum, id]);
 
@@ -156,16 +110,9 @@ export function PatientPage(): JSX.Element {
     return <Loading />;
   }
 
-  // working medplum response data. uncomment out when tests pass
-  // const { patient, appointments, orders, reports, requestGroups, clinicalNotes } = response.data;
-
-  // test response data. go through one by one when adding mock data
-  const { patient, appointments } = response.data;
-
-  console.log('response.data: ', response.data)
-  console.log('patient page appointments: ', appointments)
+  const { patient, appointments, orders, reports, requestGroups, clinicalNotes } = response.data;
   
-  const allResources = [...appointments];
+  const allResources = [...appointments, ...orders, ...reports];
   allResources.sort((a, b) => (a.meta?.lastUpdated as string).localeCompare(b.meta?.lastUpdated as string));
 
   const tab = resolveTab(params.tab);
@@ -195,7 +142,7 @@ export function PatientPage(): JSX.Element {
           <Tabs.Panel value="visits">
             <VisitsTab appointments={appointments} />
           </Tabs.Panel>
-          {/* <Tabs.Panel value="labreports">
+          <Tabs.Panel value="labreports">
             <LabAndImagingTab patient={patient} orders={orders} resource={resource} />
           </Tabs.Panel>
           <Tabs.Panel value="medication">
@@ -209,7 +156,7 @@ export function PatientPage(): JSX.Element {
           </Tabs.Panel>
           <Tabs.Panel value="clinicalnotes">
             <ClinicalNotesTab clinicalNotes={clinicalNotes} />
-          </Tabs.Panel> */}
+          </Tabs.Panel>
         </Document>
       </Tabs>
     </>
@@ -284,7 +231,6 @@ function VisitsTab({ appointments }: { appointments: Appointment[] }): JSX.Eleme
   );
 }
 
-/*
 function LabAndImagingTab({
   patient,
   orders,
@@ -534,7 +480,7 @@ function ClinicalNotePanel({ note }: { note: DocumentReference }): JSX.Element {
   }, [medplum, note]);
   return <>{content}</>;
 }
-*/
+
 function resolveTab(input: string): string {
   if (!input) {
     return 'overview';
