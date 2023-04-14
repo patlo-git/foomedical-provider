@@ -10,11 +10,13 @@ import {
 } from '@medplum/fhirtypes';
 import { randomUUID } from 'crypto';
 
-// Setup mock Resources
 export const BruceWayne: Patient = {
   resourceType: 'Patient',
-  //  if we don't hardcode an id on the mock patient in this testing scenario the resources attached to the patient won't be able to create a reference to the patient. Passing a resource without an id to createReference() returns undefined and does not connect the resources.
-  // Otherwise, id is authored on a resource during a create operation.
+  // Valid as of Medplum v2.0.12. 
+  // Due to how we've configured these resources for testing, 
+  // we're hardcoding an id here for createReference to link resources,
+  // but also to use the id in our tests.
+  // In another configuration you may allow createResoure to author an id.
   id: randomUUID(),
   identifier: [
     {
@@ -43,7 +45,7 @@ export const BruceWayne: Patient = {
         text: "Driver's License",
       },
       system: 'urn:oid:2.16.840.1.113883.4.3.25',
-      value: 'S99985931',
+      value: 'S99985935',
     },
   ],
   birthDate: '1978',
@@ -80,8 +82,7 @@ export const BruceWayne: Patient = {
   ]
 };
 
-// modelled on Medplum mock patient, 'Kay Raynor'
-export const BruceWayneAppointment: Appointment = {
+export const BruceAppointments: Appointment = {
   resourceType: 'Appointment',
   participant: [
     { 
@@ -89,6 +90,7 @@ export const BruceWayneAppointment: Appointment = {
       status: 'needs-action',
     },
   ],
+  id: randomUUID(),
   identifier: [
     {
       system: 'mock identifier',
@@ -122,10 +124,7 @@ export const BruceWayneAppointment: Appointment = {
   status: 'proposed',
 };
 
-// Service Request - Labs and Imaging resource
-// partially modelled on Medplum mock patient, 'Russell Kuhn'
-// passing in a random id since we use Orders as a reference in Reports
-export const BruceWayneOrders: ServiceRequest = {
+export const BruceOrders: ServiceRequest = {
   resourceType: 'ServiceRequest',
   id: randomUUID(),
   subject: createReference(BruceWayne),
@@ -153,12 +152,10 @@ export const BruceWayneOrders: ServiceRequest = {
   status: 'completed',
 };
 
-// Creating a Diagnostic Report
-// Using pattern from simpsons.ts in Medplum mock packages to create the Observations
 export const bruceObservation1: Observation = {
   resourceType: 'Observation',
-  basedOn: [createReference(BruceWayneOrders)], // Connect this Observation to the ServiceRequest
-  subject: createReference(BruceWayne), // Connect this Observation to the Patient
+  basedOn: [createReference(BruceOrders)],
+  subject: createReference(BruceWayne),
   status: 'preliminary',
   code: {
     coding: [
@@ -179,8 +176,8 @@ export const bruceObservation1: Observation = {
   
 export const bruceObservation2: Observation = {
   resourceType: 'Observation',
-  basedOn: [createReference(BruceWayneOrders)], // Connect this Observation to the ServiceRequest
-  subject: createReference(BruceWayne), // Connect this Observation to the Patient
+  basedOn: [createReference(BruceOrders)],
+  subject: createReference(BruceWayne),
   status: 'preliminary',
   code: {
     coding: [
@@ -199,13 +196,11 @@ export const bruceObservation2: Observation = {
   },
 };
 
-// Diagnostic Report - Labs & Imaging resource
-// modeled on Medplum mock patient, 'Gerardo Green'
-// using the above Observation data 
-export const BruceWayneReports: DiagnosticReport = {
+export const BruceReports: DiagnosticReport = {
   resourceType: 'DiagnosticReport',
-  basedOn: [createReference(BruceWayneOrders)], // Connect this DiagnosticReport to the ServiceRequest
-  subject: createReference(BruceWayne), // Connect this DiagnosticReport to the Patient,
+  basedOn: [createReference(BruceOrders)],
+  subject: createReference(BruceWayne),
+  id: randomUUID(),
   code: {
     text: 'Diagnostic Report',
     coding: [
@@ -246,12 +241,11 @@ export const BruceWayneReports: DiagnosticReport = {
   ],
 };
 
-// Request Group - Care Plans 
-// modelled on mock patients, 'Ryan Baily' and 'Kay Raynor'
-export const BruceWayneRequestGroups: RequestGroup = {
+export const BruceRequestGroups: RequestGroup = {
   resourceType: 'RequestGroup',
   subject: createReference(BruceWayne),
-  status: 'draft',
+  id: randomUUID(),
+  status: 'active',
   intent: 'proposal',
   code: {
     text: "COVID-19 Assessment",
@@ -272,12 +266,11 @@ export const BruceWayneRequestGroups: RequestGroup = {
   ]
 };
 
-// Document Reference
-// partially modelled on mock patient, 'Johnathan Kemmer'
-export const BruceWayneClinicalNotes: DocumentReference = {
+export const BruceClinicalNotes: DocumentReference = {
   resourceType: 'DocumentReference',
   description: `This is a clinical note for Bruce Wayne`,
   subject: createReference(BruceWayne),
+  id: randomUUID(),
   category: [
     {
       text: 'clinical-note',
@@ -293,13 +286,7 @@ export const BruceWayneClinicalNotes: DocumentReference = {
   },
   content: [
     {
-      // modelled on Medplum mock patient 'Kay Raynor'
-      attachment: {
-        /*
-        url: 'https://storage.medplum.com/binary/6278687b-679c-40d4-a0dd-ac846191e940/99f46b2d-2d0b-46ae-ba0d-858a07289a6a?Expires=1681235171&Key-Pair-Id=K1PPSRCGJGLWV7&Signature=Qjo7T1qeRYokDfzK8Cs2AzaAMKnWHG6L2UO7ra4~Gtbyc1Q8sD4A4K8ZvJWE~y1nJayDCSsPstQYwCQ3TZ2k9w8c2lQFzeg9wlNtiBNHskXimy0pqYBKUGTHPpIiy-4cABLNzkLvl2tQYXeqpFaA8eooSNLwvOrERMfKHUubXBPpRtQSZ5GRgINugzC-TpcgGyXCuaDmkY9IYbUgc7Y80aS3w2C~qJw3UjcAS98K6wr9-77fC09d3-znP~k5lCQRqYmXg-jygHonlH8epR4Y72jgJJ-D6WzSODvta4GGDZYxuRwTX1EU4WQTGf9Gyyvwc2gbqG33VvvsdBLohoVIRg__',
-        */
-        title: 'Clinical Note',
-      },
+      attachment: {},
     },
   ],
   status: 'current',
