@@ -111,7 +111,7 @@ export function PatientPage(): JSX.Element {
   }
 
   const { patient, appointments, orders, reports, requestGroups, clinicalNotes } = response.data;
-  
+
   const allResources = [...appointments, ...orders, ...reports];
   allResources.sort((a, b) => (a.meta?.lastUpdated as string).localeCompare(b.meta?.lastUpdated as string));
 

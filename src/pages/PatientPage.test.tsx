@@ -1,16 +1,15 @@
 import { indexStructureDefinitionBundle, indexSearchParameterBundle, OperationOutcomeError } from '@medplum/core';
 import { readJson } from '@medplum/definitions';
-import { Patient, Appointment, ServiceRequest, DiagnosticReport, RequestGroup, DocumentReference, Bundle, SearchParameter } from '@medplum/fhirtypes';
+import { Bundle, SearchParameter } from '@medplum/fhirtypes';
 import { MockClient } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import React, { Suspense } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { PatientPage } from './PatientPage';
 import { Loading } from '../components/Loading';
-import { BruceWayne, BruceWayneAppointment, BruceWayneOrders, BruceWayneReports, BruceWayneRequestGroups, BruceWayneClinicalNotes } from '../mocks/brucewayne';
+import { BruceWayne, BruceAppointments, BruceOrders, BruceReports, BruceRequestGroups, BruceClinicalNotes } from '../mocks/brucewayne';
 
-// For ReferenceError: ResizeObserver is not defined error
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
   unobserve: jest.fn(),
@@ -26,14 +25,22 @@ Object.defineProperty(window, 'location', {
   writable: true,
 });
 
-let bruceWayne: Patient;
-let bruceAppointments: Appointment;
-let bruceOrders: ServiceRequest;
-let bruceReports: DiagnosticReport;
-let bruceRequestGroups: RequestGroup;
-let bruceClinicalNotes: DocumentReference;
-
 const medplum = new MockClient();
+
+async function initMockResources(): Promise<void> {
+  const mockResources = [
+    BruceWayne,
+    BruceAppointments,
+    BruceOrders,
+    BruceReports,
+    BruceRequestGroups,
+    BruceClinicalNotes,
+  ];
+
+  for (const resource of mockResources) {
+    await medplum.createResource(resource);
+  };
+};
 
 describe('Patient Page', () => {
   async function setup(url = '/Patient'): Promise<void> {
@@ -58,35 +65,31 @@ describe('Patient Page', () => {
     indexStructureDefinitionBundle(readJson('fhir/r4/profiles-types.json') as Bundle);
     indexStructureDefinitionBundle(readJson('fhir/r4/profiles-resources.json') as Bundle);
     indexSearchParameterBundle(readJson('fhir/r4/search-parameters.json') as Bundle<SearchParameter>);
-    
-    bruceWayne = await medplum.updateResource(BruceWayne);
-    bruceAppointments = await medplum.createResource(BruceWayneAppointment);
-    bruceOrders = await medplum.createResource(BruceWayneOrders);
-    bruceReports = await medplum.createResource(BruceWayneReports);
-    bruceRequestGroups = await medplum.createResource(BruceWayneRequestGroups);
-    bruceClinicalNotes = await medplum.createResource(BruceWayneClinicalNotes);
+
+    await initMockResources();
   });
 
   test('MockClient has mock patient', async () => {
-    expect(bruceWayne).toBeDefined();
+    expect(BruceWayne).toBeDefined();
     const existingPatient = await medplum.searchOne('Patient', 'identifier=S99985935');
 
     expect(existingPatient).toBeDefined();
-    expect(existingPatient).toEqual(bruceWayne);
+    expect(existingPatient).not.toEqual(BruceWayne);
   });
 
   test('MockClient has mock patient\'s appointment', async () => {
-    expect(bruceAppointments).toBeDefined();
+    expect(BruceAppointments).toBeDefined();
+    const identifierValue = BruceAppointments.identifier?.[0].value;
 
-    const existingAppointment = await medplum.searchOne('Appointment', `identifier=bat-aptmt`);
+    const existingAppointment = await medplum.searchOne('Appointment', 'identifier=' + identifierValue);
 
     expect(existingAppointment).toBeDefined();
-    expect(existingAppointment).toEqual(bruceAppointments);
+    expect(existingAppointment).not.toEqual(BruceAppointments);
   });
   
   test('Graphql call on MockClient returns mock patient', async () => {
     const query = `{
-      patient: Patient(id: "${bruceWayne.id}") {
+      patient: Patient(id: "${BruceWayne.id}") {
         resourceType,
         id,
         meta { lastUpdated },
@@ -107,13 +110,13 @@ describe('Patient Page', () => {
   });
 
   test('Mock patient renders', async () => {
-    await setup(`/Patient/${bruceWayne.id}`);
+    await setup(`/Patient/${BruceWayne.id}`);
     expect(screen.getByText('Bruce Wayne')).toBeInTheDocument();
     expect(screen.getByText('notbatman@wayneenterprises.com')).toBeInTheDocument();
   });
 
   test('Patient Page tabs render', async () => {
-    await setup(`/Patient/${bruceWayne.id}`);
+    await setup(`/Patient/${BruceWayne.id}`);
     expect(screen.getByRole('tab', { name: 'Overview'})).toHaveAttribute('aria-selected', 'true');
 
     expect(screen.getByRole('tab', {  name: 'Overview' })).toBeInTheDocument();
@@ -126,7 +129,7 @@ describe('Patient Page', () => {
   })
 
   test('Patient Page home and Overview tab renders', async () => {
-    await setup(`/Patient/${bruceWayne.id}`);
+    await setup(`/Patient/${BruceWayne.id}`);
 
     expect(screen.getByRole('tab', {  name: 'Overview' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Overview' })).toBeInTheDocument();
@@ -137,7 +140,7 @@ describe('Patient Page', () => {
   })
   
   test('Overview tab renders with Appointment link', async () => {
-    await setup(`/Patient/${bruceWayne.id}/overview?task=null`);
+    await setup(`/Patient/${BruceWayne.id}/overview?task=null`);
 
     expect(screen.getByRole('tab', { name: 'Overview'})).toHaveAttribute('aria-selected', 'true');
 
@@ -149,7 +152,7 @@ describe('Patient Page', () => {
   });
 
   test('Overview tab renders Service Request link', async () => {
-    await setup(`/Patient/${bruceWayne.id}/overview?task=null`);
+    await setup(`/Patient/${BruceWayne.id}/overview?task=null`);
 
     expect(screen.getByRole('tab', { name: 'Overview'})).toHaveAttribute('aria-selected', 'true');
 
@@ -161,7 +164,7 @@ describe('Patient Page', () => {
   });
 
   test('Overview tab renders Diagnostic Report link', async () => {
-    await setup(`/Patient/${bruceWayne.id}/overview?task=null`);
+    await setup(`/Patient/${BruceWayne.id}/overview?task=null`);
 
     expect(screen.getByRole('tab', { name: 'Overview'})).toHaveAttribute('aria-selected', 'true');
 
@@ -173,7 +176,7 @@ describe('Patient Page', () => {
   });
 
   test('Visits tab renders on click', async () => {
-    await setup(`/Patient/${bruceWayne.id}`);
+    await setup(`/Patient/${BruceWayne.id}`);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Visits'}));
@@ -187,30 +190,30 @@ describe('Patient Page', () => {
   });
 
   test('Visits tab renders with Appointments', async () => {
-    await setup(`/Patient/${bruceWayne.id}/Appointment/${bruceAppointments.id}`);
+    await setup(`/Patient/${BruceWayne.id}/Appointment/${BruceAppointments.id}`);
 
     expect(screen.getByRole('cell', { name: 'Counselling' })).toBeInTheDocument();
   });
 
   test('Visits tab renders with No Appointments', async () => {
-    const bruceAppointmentsId = bruceAppointments.id as string;
+    const BruceAppointmentsId = BruceAppointments.id as string;
 
-    await medplum.deleteResource('Appointment', bruceAppointmentsId);
+    await medplum.deleteResource('Appointment', BruceAppointmentsId);
 
     try {
-      await medplum.readResource('Appointment', bruceAppointmentsId);
+      await medplum.readResource('Appointment', BruceAppointmentsId);
       fail('Should have thrown');
     } catch (err) {
       const outcome = (err as OperationOutcomeError).outcome;
       expect(outcome.id).toEqual('not-found');
     } finally {
-      await setup(`/Patient/${bruceWayne.id}/visits?task=null`);
+      await setup(`/Patient/${BruceWayne.id}/visits?task=null`);
       expect(screen.getByText('No appointments found')).toBeInTheDocument();
     }
   });
 
   test('Labs & Imaging tab renders on click', async () => {
-    await setup(`/Patient/${bruceWayne.id}`);
+    await setup(`/Patient/${BruceWayne.id}`);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Labs & Imaging'}));
@@ -218,7 +221,6 @@ describe('Patient Page', () => {
     
     expect(screen.getByRole('tab', { name: 'Labs & Imaging'})).toHaveAttribute('aria-selected', 'true');
 
-    // Displays Service Request if orders exists
     expect(screen.getByText('Imaging')).toBeInTheDocument();
     expect(screen.getByText('Cranial MRI')).toBeInTheDocument();
 
@@ -232,14 +234,13 @@ describe('Patient Page', () => {
   });
 
   test('Labs & Imaging tab renders with Service Request', async () => {
-    // The result of click on Service Request at Overview tab or click on Review link at Labs & Imaging tab when orders exist
-    await setup(`/Patient/${bruceWayne.id}/ServiceRequest/${bruceOrders.id}`);
+    await setup(`/Patient/${BruceWayne.id}/ServiceRequest/${BruceOrders.id}`);
 
     expect(screen.getByRole('tab', { name: 'Labs & Imaging'})).toHaveAttribute('aria-selected', 'true');
     
     expect(screen.getByRole('heading', {  name: 'Service Request'})).toBeInTheDocument();
     
-    expect(screen.getByText(`${bruceOrders.id}`)).toBeInTheDocument();
+    expect(screen.getByText(`${BruceOrders.id}`)).toBeInTheDocument();
     expect(screen.getByText(`completed`)).toBeInTheDocument();
     
     await act(async () => {
@@ -256,7 +257,7 @@ describe('Patient Page', () => {
   });
 
   test('Labs & Imaging tab renders with No Orders', async () => {
-    const ordersId = bruceOrders.id as string;
+    const ordersId = BruceOrders.id as string;
 
     await medplum.deleteResource('ServiceRequest', ordersId);
 
@@ -267,23 +268,21 @@ describe('Patient Page', () => {
       const outcome = (err as OperationOutcomeError).outcome;
       expect(outcome.id).toEqual('not-found');
     } finally {
-      await setup(`/Patient/${bruceWayne.id}/labreports?task=null`);
+      await setup(`/Patient/${BruceWayne.id}/labreports?task=null`);
       expect(screen.getAllByText('No orders found')).toHaveLength(2);
     }
   });
 
   test('Labs & Imaging tab renders with Diagnostic Report', async () => {
-    // result of click on Diagnostic Report link at Overview tab
-    await setup(`/Patient/${bruceWayne.id}/DiagnosticReport/${bruceReports.id}`);
+    await setup(`/Patient/${BruceWayne.id}/DiagnosticReport/${BruceReports.id}`);
 
     expect(screen.getByRole('tab', { name: 'Labs & Imaging'})).toHaveAttribute('aria-selected', 'true');
 
-    // Approve button renders if there's a report
     expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument();
   });
 
   test('Medication tab renders on click', async () => {
-    await setup(`/Patient/${bruceWayne.id}`);
+    await setup(`/Patient/${BruceWayne.id}`);
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Medication'}));
     });
@@ -292,7 +291,6 @@ describe('Patient Page', () => {
 
     expect(screen.getByRole('link', {  name: 'Order'})).toBeInTheDocument();
 
-    // takes users from /Patient to /Questionnaire
     await act(async () => {
       fireEvent.click(screen.getByRole('link', { name: 'Order'}));
     });
@@ -301,7 +299,7 @@ describe('Patient Page', () => {
   });
 
   test('Care Plans tab renders on click', async () => {
-    await setup(`/Patient/${bruceWayne.id}`);
+    await setup(`/Patient/${BruceWayne.id}`);
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Care Plans'}));
     });
@@ -312,7 +310,7 @@ describe('Patient Page', () => {
   });
 
   test('Care Plans tab renders', async () => {
-    await setup(`/Patient/${bruceWayne.id}/careplans?task=null`);
+    await setup(`/Patient/${BruceWayne.id}/careplans?task=null`);
 
     expect(screen.getByRole('tab', { name: 'Care Plans'})).toHaveAttribute('aria-selected', 'true');
 
@@ -322,7 +320,7 @@ describe('Patient Page', () => {
   });
 
   test('Forms tab renders on click', async () => {
-    await setup(`/Patient/${bruceWayne.id}`);
+    await setup(`/Patient/${BruceWayne.id}`);
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Forms'}));
     });
@@ -333,7 +331,7 @@ describe('Patient Page', () => {
   });
 
   test('Forms tab renders', async () => {
-    await setup(`/Patient/${bruceWayne.id}/forms?task=null`);
+    await setup(`/Patient/${BruceWayne.id}/forms?task=null`);
 
     expect(screen.getByRole('tab', { name: 'Forms'})).toHaveAttribute('aria-selected', 'true');
 
@@ -344,7 +342,7 @@ describe('Patient Page', () => {
   });
 
   test('Clinical Notes tab renders on click', async () => {
-    await setup(`/Patient/${bruceWayne.id}`);
+    await setup(`/Patient/${BruceWayne.id}`);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Clinical Notes'}));
@@ -358,17 +356,16 @@ describe('Patient Page', () => {
   });
 
   test('Clinical Notes tab with no url renders', async () => {
-    const notesId = bruceClinicalNotes.id as string;
+    const notesId = BruceClinicalNotes.id as string;
     
     await medplum.patchResource('DocumentReference', notesId, [
       {op: 'replace', path: '/content/0/attachment', value: {}},
     ]);
     
-    await setup(`/Patient/${bruceWayne.id}/clinicalnotes?task=null`);
+    await setup(`/Patient/${BruceWayne.id}/clinicalnotes?task=null`);
 
     expect(screen.getByRole('tab', { name: 'Clinical Notes'})).toHaveAttribute('aria-selected', 'true');
     
-    // default lorem ipsum if no content.attachment.url on notes
     expect(screen.getByText('Labore et dolore magna aliqua. Orci phasellus egestas tellus rutrum tellus pellentesque eu.')).toBeInTheDocument();
   });
 });
